@@ -1,0 +1,18 @@
+{
+  "presets": [ "es2015", "stage-0"],
+
+  /* if you want to use babel runtime, uncomment the following line */
+  // "plugins": ["transform-runtime"],
+  // https://github.com/babel/generator-babel-boilerplate/issues/362
+  "plugins": [
+    "add-module-exports",
+    // https://phabricator.babeljs.io/T2877
+    //["transform-runtime", { "polyfill": false }]
+  ],
+
+  "env": {
+    "build": {
+      "optional": ["optimisation", "minification"]
+    }
+  }
+}
