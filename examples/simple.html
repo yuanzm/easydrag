@@ -2,7 +2,7 @@
 <html>
 <head lang="zh-CN">
     <meta charset="UTF-8">
-    <title>ES6-dev_template</title>
+    <title>EasyDrag demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <meta name="apple-mobile-web-app-capable" content="no"/>
     <meta name="format-detection" content="telephone=no">
@@ -11,15 +11,47 @@
     <meta name="wxm:appmessage_desc" content=" ">
     <meta name="wxm:img_url" content="">
     <meta name="wxm:link" content="">
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        #game__icon {
+            width: 59px;
+            height: 59px;
+            border-radius: 11px;
+            background-color: #444;
+            opacity: 0.5;
+            cursor: pointer;
+        }
+        #wrapper {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            border: solid 1px #333;
+        }
+    </style>
 </head>
 <body>
-
+    <div id="wrapper">
+        <div id="game__icon"></div>
+    </div>
 </body>
 <script type="text/javascript" src="../dist/index.js"></script>
 <script type="text/javascript">
-    var es6template = new ES6Template();
-
-    es6template.sayName();
-
+    let drag = new EasyDrag(
+        document.getElementById('game__icon'),
+        {},
+        {
+            // lockX   : true,
+            // wrapper : document.getElementById('wrapper') 
+        }
+    );
 </script>
 </html>

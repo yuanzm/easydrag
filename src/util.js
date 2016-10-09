@@ -1,110 +1,92 @@
+/**
+ * @author: zimyuan
+ * @last-edit-date: 2016-10-08
+ */
 
 let util = {
-	isType (type, value) {
-		let _type = Object
-			   		.prototype
-			   		.toString
-			   		.call(value)
-			   		.match(/\s(\w+)/)[1]
-			   		.toLowerCase();
+    extend (a, b) {
+        for ( let key in b )
+            if ( b.hasOwnProperty(key) )
+                a[key] = b[key];
 
-		return _type === type;
-	},
+        return a;
+    },
 
-	isPlainObject (value) {
-		return ( !!value && util.isType('object', value) );
-	},
+    getDragEvents: () => {
+        let mouseEvents = {
+            start : 'mousedown',
+            move  : 'mousemove',
+            end   : 'mouseup',
+        };
 
-	extend (destination, source) {
-		if ( !util.isPlainObject(destination) || !util.isPlainObject(source) )
-			throw 'destination and source must be type of object';
+        let touchEvents = {
+            start : 'touchstart',
+            move  : 'touchmove',
+            end   : 'touchend'
+        };
 
-		for ( let property in source )
-			destination[property] = source[property];
+        return (  !!( 'ontouchstart' in window )
+                ? touchEvents
+                : mouseEvents  );
+    },
 
-		return destination;
-	},
+    // Get CSS vendor-prefixed transform property.
+    getStylePrefix: () => {
+        let prefixes = ' -o- -ms- -moz- -webkit-'.split(' ');
+        let style = document.body.style;
 
-	getDragEvents: () => {
-		let mouseEvents = {
-			start : 'mousedown',
-			move  : 'mousemove',
-			end   : 'mouseup',
-		};
+        for (let n = prefixes.length; n--;) {
+            let property = prefixes[n] + 'transform';
+            if ( property in style )
+                return property;
+        }
+    },
 
-		let touchEvents = {
-			start : 'touchstart',
-			move  : 'touchmove',
-			end   : 'touchend'
-		};
+    getPosition: (ele) => {
+        if ( !window.getComputedStyle )
+            return;
 
-		return (  !!( 'ontouchstart' in window )
-				? touchEvents
-				: mouseEvents  );
-	},
-
-	// Get CSS vendor-prefixed transform property.
-	getStylePrefix: () => {
-	  	let prefixes = ' -o- -ms- -moz- -webkit-'.split(' ');
-		let style = document.body.style;
-
-      	for (let n = prefixes.length; n--;) {
-	        let property = prefixes[n] + 'transform';
-	        if ( property in style )
-	          	return property;
-		}
-	},
-
-	getPosition: () => {
-
-	},
-
-	getComputedPosition: (ele) => {
-		if ( !window.getComputedStyle )
-			return;
-
-    	let style     = getComputedStyle(ele);
+        let style     = window.getComputedStyle(ele);
         let transform = style.transform       || 
-        				style.webkitTransform ||
-        				style.mozTransform    ||
-        				style.msTransform;
-    	let mat       = transform.match(/^matrix3d\((.+)\)$/);
-    	let x;
-    	let y;
+                        style.webkitTransform ||
+                        style.mozTransform    ||
+                        style.msTransform;
+        let mat       = transform.match(/^matrix3d\((.+)\)$/);
+        let x;
+        let y;
+        if ( mat )
+            return parseFloat( mat[1].split(', ')[13] );
 
-    	if ( mat )
-    		return parseFloat( mat[1].split(', ')[13] );
+        mat = transform.match( /^matrix\((.+)\)$/ );
 
-    	mat = transform.match( /^matrix\((.+)\)$/ );
+        x = (  mat 
+             ? parseFloat(mat[1].split(', ')[4]) 
+             : 0  );
+        y = (  mat 
+             ? parseFloat(mat[1].split(', ')[5]) 
+             : 0  );
 
-    	x = (  mat 
-    		 ? parseFloat(mat[1].split(', ')[4]) 
-    		 : 0  );
-    	y = (  mat 
-    		 ? parseFloat(mat[1].split(', ')[5]) 
-    		 : 0  );
-    	
-    	return { x, y };
-	},
+        return { x, y };
+    },
 
-	hasClass (ele, cls) {
-      	let reg       = new RegExp('(\\s|^)' + cls + '(\\s|$)');
-      	let className = ele.getAttribute("class") ? ele.className : '';
+    hasClass (ele, cls) {
+        let reg       = new RegExp('(\\s|^)' + cls + '(\\s|$)');
+        let className = ele.getAttribute("class") ? ele.className : '';
 
-      	return reg.test(className);
+        return reg.test(className);
     },
 
     addClass (ele, cls) {
-      	if ( !util.hasClass(ele, cls) )
-        	return ele.className += ' ' + cls;
+        if ( !util.hasClass(ele, cls) )
+            return ele.className += ' ' + cls;
     },
 
     removeClass (ele, cls) {
-      	if ( util.hasClass(ele, cls) ) {
-        	let reg = new RegExp('(\\s|^)' + cls + '(\\s|$)');
+        if ( util.hasClass(ele, cls) ) {
+            let reg = new RegExp('(\\s|^)' + cls + '(\\s|$)');
 
-        	return ele.className = ele.className.replace(reg, ' ');
-      	}
+            return ele.className = ele.className.replace(reg, ' ');
+        }
     },
 
     // add event listener hack
@@ -144,13 +126,13 @@ let util = {
      * http://stackoverflow.com/questions/1000597/event-preventdefault-function-not-working-in-ie
      */ 
     preventDefault (e) {
-    	if ( e.preventDefault )
-    		e.preventDefault();
-    	else
-    		// It's worth noting that "event" must be the global event object in IE8.
-    		// You can't use the event passed into the event handler,
-    		// like e.preventDefault, it must be event.preventDefault in order for this to work in IE8.
-    		event.returnValue = false;
+        if ( e.preventDefault )
+            e.preventDefault();
+        else
+            // It's worth noting that "event" must be the global event object in IE8.
+            // You can't use the event passed into the event handler,
+            // like e.preventDefault, it must be event.preventDefault in order for this to work in IE8.
+            event.returnValue = false;
     },
 
     /**
@@ -160,15 +142,28 @@ let util = {
      * http://stackoverflow.com/questions/7056026/variation-of-e-touches-e-targettouches-and-e-changedtouches
      */
     getCursor (e) {
-		return (  !!( 'ontouchstart' in window )
-				? { 
-				      x: e.touches[0].pageX,
-					  y: e.touches[0].pageY 
-				  }
-				: {
-				      x: e.clientX,
-					  y: e.clientY
-				  }  );
+        return (  !!( 'ontouchstart' in window )
+                ? { 
+                      x: e.touches[0].pageX,
+                      y: e.touches[0].pageY 
+                  }
+                : {
+                      x: e.clientX,
+                      y: e.clientY
+                  }  );
+    },
+
+    /**
+     * Get width and height of element
+     * It is better to use clientWidth/clientHeight than offsetWidth/offsetHeight
+     *
+     * http://stackoverflow.com/questions/21064101/understanding-offsetwidth-clientwidth-scrollwidth-and-height-respectively
+     */
+    getEleSize (ele) {
+    	return {
+    		width  : parseInt(ele.clientWidth, 10),
+    		height : parseInt(ele.clientHeight, 10) 
+    	};
     }
 };
 
