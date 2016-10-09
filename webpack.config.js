@@ -14,7 +14,7 @@ module.exports = {
         path           : __dirname + '/dist',
         publicPath     : '/',
         filename       : './index.js',
-        library        : 'ES6Template',
+        library        : 'EasyDrag',
         libraryTarget  : 'umd',
         umdNamedDefine : true
     },
