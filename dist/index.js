@@ -64,12 +64,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	Object.defineProperty(exports, "__esModule", {
-			value: true
+		value: true
 	});
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @author: zimyuan
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @last-edit-date: 2016-10-08
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @last-edit-date: 2016-10-10
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
 	var _util = __webpack_require__(2);
@@ -78,13 +78,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	// default config
 	var defaultConfig = {
-			draggingClass: 'dragging',
-			wrapper: null,
-			limitX: [-9999, 9999],
-			limitY: [-9999, 9999],
-			lockX: false,
-			lockY: false,
-			useGPU: true
+		draggingClass: 'dragging',
+		wrapper: null,
+		limitX: [-9999, 9999],
+		limitY: [-9999, 9999],
+		lockX: false,
+		lockY: false,
+		useGPU: true,
+		lockScreen: false
 	};
 
 	function none() {}
@@ -94,154 +95,196 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var EasyDrag = function () {
-			function EasyDrag(ele) {
-					var handlers = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-					var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+		function EasyDrag(ele) {
+			var handlers = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+			var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
-					_classCallCheck(this, EasyDrag);
+			_classCallCheck(this, EasyDrag);
 
-					// Extend default config, customize will replace default config.
-					this.config = _util.util.extend(defaultConfig, options);
-					console.log(this.config);
-					this.ele = ele;
-					this.dragEvent = _util.util.getDragEvents();
+			// Extend default config, customize will replace default config.
+			this.config = _util.util.extend(defaultConfig, options);
+			this.ele = ele;
+			this.dragEvent = _util.util.getDragEvents();
 
-					// event hooks;
-					this.onDragStart = handlers.onDragStart || none;
-					this.onDragIng = handlers.onDragIng || none;
-					this.onDragEnd = handlers.onDragEnd || none;
+			// event hooks;
+			this.onDragStart = handlers.onDragStart || none;
+			this.onDragIng = handlers.onDragIng || none;
+			this.onDragEnd = handlers.onDragEnd || none;
 
-					this.init();
+			this.init();
+		}
+
+		_createClass(EasyDrag, [{
+			key: 'init',
+			value: function init() {
+				// use to save start positon temply
+				this.startPos = _util.util.getPosition(this.ele);
+
+				this.initPos = _util.util.getOffsetPosition(this.ele);
+				this.currPos = { x: 0, y: 0 };
+
+				this.prefix = _util.util.getStylePrefix();
+
+				// bind function context
+				this.start = this.start.bind(this);
+				this.move = this.move.bind(this);
+				this.end = this.end.bind(this);
+
+				_util.util.addEvent(this.ele, this.dragEvent.start, this.start);
+
+				if (this.config.wrapper) this.limitDragInWrapper(this.config.wrapper);
+
+				if (this.config.lockScreen) this.limitDragInScreen();
+
+				this.initGPUAcceleration();
+
+				// fix bug in WeChat(IOS)!!!
+				document.ontouchend = none;
 			}
 
-			_createClass(EasyDrag, [{
-					key: 'init',
-					value: function init() {
-							// use to save start positon temply
-							this.startPos = { x: 0, y: 0 };
+			/**
+	   * Use GPU Acceleration to improve performance.
+	   * 
+	   * reference
+	   * https://www.sitepoint.com/introduction-to-hardware-acceleration-css-animations/
+	   */
 
-							// bind function context
-							this.start = this.start.bind(this);
-							this.move = this.move.bind(this);
-							this.end = this.end.bind(this);
+		}, {
+			key: 'initGPUAcceleration',
+			value: function initGPUAcceleration() {
+				if (this.config.useGPU) _util.util.setCSSText(this.ele, 'transform: translate3d(0px, 0px, 0px);');
+			}
+		}, {
+			key: 'getPosInLimit',
+			value: function getPosInLimit(cur, lowLimit, highLimit) {
+				var validPos = void 0;
 
-							_util.util.addEvent(this.ele, this.dragEvent.start, this.start);
+				if (cur >= lowLimit && cur <= highLimit) validPos = cur;else if (cur < lowLimit) validPos = lowLimit;else if (cur > highLimit) validPos = highLimit;
 
-							if (this.config.wrapper) this.setWrapper(this.config.wrapper);
-					}
-			}, {
-					key: 'getPosInLimit',
-					value: function getPosInLimit(cur, lowLimit, highLimit) {
-							var validPos = void 0;
+				return validPos;
+			}
+		}, {
+			key: 'getRealPosition',
+			value: function getRealPosition(startPos, movePos) {
+				return {
+					x: startPos.x + movePos.x,
+					y: startPos.y + movePos.y
+				};
+			}
+		}, {
+			key: 'moveTo',
+			value: function moveTo(pos) {
+				var GPUCSS = this.config.useGPU ? 'translate3d(0px, 0px, 0px)' : '';
 
-							if (cur >= lowLimit && cur <= highLimit) validPos = cur;else if (cur < lowLimit) validPos = lowLimit;else if (cur > highLimit) validPos = highLimit;
+				var cssStr = this.prefix + ':translate(' + pos.x + 'px, ' + pos.y + 'px) ' + GPUCSS + ';';
 
-							return validPos;
-					}
-			}, {
-					key: 'moveTo',
-					value: function moveTo(pos) {
-							var prefix = _util.util.getStylePrefix();
+				_util.util.setCSSText(this.ele, cssStr);
+			}
+		}, {
+			key: 'start',
+			value: function start(e) {
+				var that = this;
 
-							this.ele.style.cssText = prefix + ':translate(' + pos.x + 'px, ' + pos.y + 'px);';
-					}
-			}, {
-					key: 'start',
-					value: function start(e) {
-							var that = this;
+				if (that.ele.setCapture) {
+					that.ele.setCapture();
+				} else if (window.captureEvents) {
+					window.captureEvents(Event.MOUSEMOVE | Event.MOUSEUP);
+				}
 
-							_util.util.preventDefault(e);
-							_util.util.addClass(that.ele, that.config.draggingClass);
-							// TODO: set index
+				_util.util.preventDefault(e);
+				_util.util.addClass(that.ele, that.config.draggingClass);
 
-							// save start position temply
-							that.startPos = _util.util.getPosition(that.ele);
-							that.startCursor = _util.util.getCursor(e);
+				// save start position temply
+				that.startPos = _util.util.getPosition(that.ele);
+				that.startCursor = _util.util.getCursor(e);
 
-							// add event listener
-							_util.util.addEvent(document, that.dragEvent.move, that.move);
-							_util.util.addEvent(document, that.dragEvent.end, that.end);
+				// add event listener
+				_util.util.addEvent(document, that.dragEvent.move, that.move);
+				_util.util.addEvent(document, that.dragEvent.end, that.end);
 
-							that.onDragStart(that.startCursor.x, that.startCursor.y, e);
-					}
-			}, {
-					key: 'move',
-					value: function move(e) {
-							var that = this;
-							var newCursor = _util.util.getCursor(e);
+				that.onDragStart(that.startCursor.x, that.startCursor.y, e);
+			}
+		}, {
+			key: 'move',
+			value: function move(e) {
+				var that = this;
+				var newCursor = _util.util.getCursor(e);
 
-							_util.util.preventDefault(e);
+				_util.util.preventDefault(e);
 
-							if (!that.config.lockX) {
-									var moveX = newCursor.x - that.startCursor.x;
-									var newX = that.startPos.x + moveX;
+				if (!that.config.lockX) {
+					var moveX = newCursor.x - that.startCursor.x;
+					var newX = that.startPos.x + moveX;
 
-									that.startPos.x = that.getPosInLimit(newX, that.config.limitX[0], that.config.limitX[1]);
+					that.startPos.x = that.getPosInLimit(newX, that.config.limitX[0], that.config.limitX[1]);
 
-									if (that.startPos.x === newX) that.startCursor.x = newCursor.x;
-							}
+					if (that.startPos.x === newX) that.startCursor.x = newCursor.x;
+				}
 
-							if (!that.config.lockY) {
-									var moveY = newCursor.y - that.startCursor.y;
-									var newY = that.startPos.y + moveY;
+				if (!that.config.lockY) {
+					var moveY = newCursor.y - that.startCursor.y;
+					var newY = that.startPos.y + moveY;
 
-									that.startPos.y = that.getPosInLimit(newY, that.config.limitY[0], that.config.limitY[1]);
-									if (that.startPos.y === newY) that.startCursor.y = newCursor.y;
-							}
+					that.startPos.y = that.getPosInLimit(newY, that.config.limitY[0], that.config.limitY[1]);
+					if (that.startPos.y === newY) that.startCursor.y = newCursor.y;
+				}
 
-							// set next start position
-							that.moveTo(that.startPos);
-							that.onDragIng(that.startPos.x, that.startPos.y, e);
-					}
-			}, {
-					key: 'end',
-					value: function end() {
-							var that = this;
+				that.moveTo(that.startPos);
 
-							_util.util.removeClass(that.ele, that.config.draggingClass);
+				that.currPos = that.getRealPosition(that.initPos, that.startPos);
+				that.onDragIng(that.currPos.x, that.currPos.y, e);
+			}
+		}, {
+			key: 'end',
+			value: function end() {
+				var that = this;
 
-							_util.util.removeEvent(document, that.dragEvent.move, that.move);
-							_util.util.removeEvent(document, that.dragEvent.end, that.end);
-					}
+				_util.util.removeClass(that.ele, that.config.draggingClass);
 
-					/**
-	     * Set drap wrapper.
-	     */
+				_util.util.removeEvent(document, that.dragEvent.move, that.move);
+				_util.util.removeEvent(document, that.dragEvent.end, that.end);
 
-			}, {
-					key: 'setWrapper',
-					value: function setWrapper(outer) {
-							var that = this;
+				window.captureEvents(Event.MOUSEMOVE | Event.MOUSEUP);
+			}
+		}, {
+			key: 'setBoundWithSizeAndPos',
+			value: function setBoundWithSizeAndPos(outerPos, elePos, outerSize, eleSize) {
+				var that = this;
+				var lowerX = 0;
+				var lowerY = 0;
+				var highX = 0;
+				var highY = 0;
 
-							var outerPos = _util.util.getPosition(outer);
-							var elePos = _util.util.getPosition(that.ele);
+				if (!that.config.lockX) {
+					lowerX = outerPos.x - elePos.x;
+					highX = outerSize.width - eleSize.width - Math.abs(lowerX);
+				}
 
-							var outerSize = _util.util.getEleSize(outer);
-							var eleSize = _util.util.getEleSize(that.ele);
+				if (!that.config.lockY) {
+					lowerY = outerPos.y - elePos.y;
+					highY = outerSize.height - eleSize.height - Math.abs(lowerY);
+				}
 
-							var lowerX = 0;
-							var lowerY = 0;
-							var highX = 0;
-							var highY = 0;
+				this.config.limitX = [lowerX, highX];
+				this.config.limitY = [lowerY, highY];
+			}
+		}, {
+			key: 'limitDragInWrapper',
+			value: function limitDragInWrapper(outer) {
+				var that = this;
 
-							if (!that.config.lockX) {
-									lowerX = elePos.x - outerPos.x;
-									highX = outerSize.width - eleSize.width - Math.abs(lowerX);
-							}
+				that.setBoundWithSizeAndPos(_util.util.getOffsetPosition(outer), _util.util.getOffsetPosition(that.ele), _util.util.getEleSize(outer), _util.util.getEleSize(that.ele));
+			}
+		}, {
+			key: 'limitDragInScreen',
+			value: function limitDragInScreen() {
+				var that = this;
 
-							if (!that.config.lockY) {
-									lowerY = elePos.y - outerPos.y;
-									highY = outerSize.height - eleSize.height - Math.abs(lowerY);
-							}
+				that.setBoundWithSizeAndPos({ x: 0, y: 0 }, _util.util.getOffsetPosition(that.ele), _util.util.getScreenSize(), _util.util.getEleSize(that.ele));
+			}
+		}]);
 
-							this.config.limitX = [lowerX, highX];
-							this.config.limitY = [lowerY, highY];
-
-							console.log(this.config.limitY);
-					}
-			}]);
-
-			return EasyDrag;
+		return EasyDrag;
 	}();
 
 	exports.default = EasyDrag;
@@ -258,7 +301,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	/**
 	 * @author: zimyuan
-	 * @last-edit-date: 2016-10-08
+	 * @last-edit-date: 2016-10-10
 	 */
 
 	var util = {
@@ -266,6 +309,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        for (var key in b) {
 	            if (b.hasOwnProperty(key)) a[key] = b[key];
 	        }return a;
+	    },
+	    isTouchDevice: function isTouchDevice() {
+	        return 'ontouchstart' in window || navigator.MaxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 	    },
 
 
@@ -282,7 +328,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            end: 'touchend'
 	        };
 
-	        return !!('ontouchstart' in window) ? touchEvents : mouseEvents;
+	        return util.isTouchDevice() ? touchEvents : mouseEvents;
 	    },
 
 	    // Get CSS vendor-prefixed transform property.
@@ -296,22 +342,65 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	    },
 
+	    isStrEndWith: function isStrEndWith(str, suffix) {
+	        var l = str.length - suffix.length;
+
+	        return l >= 0 && str.indexOf(suffix, l) === l;
+	    },
+	    setCSSText: function setCSSText(ele, cssStr) {
+	        var cssText = ele.style.cssText;
+
+	        // In IE6/7/8, cssText is not end with `;` !!!
+	        if (!util.isStrEndWith(cssText, ';')) cssText += ';';
+
+	        ele.style.cssText = cssText + cssStr;
+	    },
+
+
+	    /**
+	     * Get offset postion.
+	     * 
+	     * reference
+	     *
+	     * http://youmightnotneedjquery.com/
+	     * http://ejohn.org/blog/getboundingclientrect-is-awesome/
+	     */
+	    getOffsetPosition: function getOffsetPosition(ele) {
+	        var rect = ele.getBoundingClientRect();
+
+	        return {
+	            x: rect.left + document.body.scrollLeft,
+	            y: rect.top + document.body.scrollTop
+	        };
+	    },
+
+
 	    getPosition: function getPosition(ele) {
 	        if (!window.getComputedStyle) return;
 
 	        var style = window.getComputedStyle(ele);
-	        var transform = style.transform || style.webkitTransform || style.mozTransform || style.msTransform;
-	        var mat = transform.match(/^matrix3d\((.+)\)$/);
-	        var x = void 0;
-	        var y = void 0;
-	        if (mat) return parseFloat(mat[1].split(', ')[13]);
+	        var prefix = util.getStylePrefix();
+	        var transform = style.getPropertyValue(prefix);
 
-	        mat = transform.match(/^matrix\((.+)\)$/);
+	        var mat3d = transform.match(/^matrix3d\((.+)\)$/);
+	        if (mat3d) {
+	            var coords = mat3d[1].split(', ');
+	            return {
+	                x: parseFloat(coords[12]),
+	                y: parseFloat(coords[13])
+	            };
+	        }
 
-	        x = mat ? parseFloat(mat[1].split(', ')[4]) : 0;
-	        y = mat ? parseFloat(mat[1].split(', ')[5]) : 0;
+	        var mat2d = transform.match(/^matrix\((.+)\)$/);
+	        if (mat2d) {
+	            var _coords = mat2d[1].split(', ');
+	            return {
+	                x: parseFloat(_coords[4]),
+	                y: parseFloat(_coords[5])
+	            };
+	        }
 
-	        return { x: x, y: y };
+	        return { x: 0, y: 0 };
 	    },
 
 	    hasClass: function hasClass(ele, cls) {
@@ -392,6 +481,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return {
 	            width: parseInt(ele.clientWidth, 10),
 	            height: parseInt(ele.clientHeight, 10)
+	        };
+	    },
+	    getScreenSize: function getScreenSize() {
+	        var e = window;
+	        var a = 'inner';
+
+	        if (!('innerWidth' in window)) {
+	            a = 'client';
+	            e = document.documentElement || document.body;
+	        }
+
+	        return {
+	            width: e[a + 'Width'],
+	            height: e[a + 'Height']
 	        };
 	    }
 	};

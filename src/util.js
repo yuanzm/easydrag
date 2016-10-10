@@ -1,6 +1,6 @@
 /**
  * @author: zimyuan
- * @last-edit-date: 2016-10-08
+ * @last-edit-date: 2016-10-10
  */
 
 let util = {
@@ -11,6 +11,12 @@ let util = {
 
         return a;
     },
+
+    isTouchDevice () {
+ 		return (   ( 'ontouchstart' in window )
+      		    || ( navigator.MaxTouchPoints > 0 )
+      			|| ( navigator.msMaxTouchPoints > 0 )  );
+	},
 
     getDragEvents: () => {
         let mouseEvents = {
@@ -25,7 +31,7 @@ let util = {
             end   : 'touchend'
         };
 
-        return (  !!( 'ontouchstart' in window )
+        return (  util.isTouchDevice ()
                 ? touchEvents
                 : mouseEvents  );
     },
@@ -42,31 +48,67 @@ let util = {
         }
     },
 
+    isStrEndWith (str, suffix) {
+    	let l = str.length - suffix.length;
+
+		return (   l >= 0 
+				&& str.indexOf(suffix, l) === l  );	
+    },
+
+	setCSSText(ele, cssStr) {
+		let cssText = ele.style.cssText;
+
+		// In IE6/7/8, cssText is not end with `;` !!!
+		if ( !util.isStrEndWith(cssText, ';') )
+			cssText += ';';
+
+		ele.style.cssText = cssText + cssStr;
+	}, 
+
+    /**
+     * Get offset postion.
+     * 
+     * reference
+     *
+     * http://youmightnotneedjquery.com/
+     * http://ejohn.org/blog/getboundingclientrect-is-awesome/
+     */
+    getOffsetPosition (ele) {
+      	var rect = ele.getBoundingClientRect();
+
+		return {
+		  	x: rect.left + document.body.scrollLeft,
+		  	y: rect.top + document.body.scrollTop
+		};
+    },
+
     getPosition: (ele) => {
         if ( !window.getComputedStyle )
             return;
 
         let style     = window.getComputedStyle(ele);
-        let transform = style.transform       || 
-                        style.webkitTransform ||
-                        style.mozTransform    ||
-                        style.msTransform;
-        let mat       = transform.match(/^matrix3d\((.+)\)$/);
-        let x;
-        let y;
-        if ( mat )
-            return parseFloat( mat[1].split(', ')[13] );
+        let prefix    = util.getStylePrefix();
+        let transform = style.getPropertyValue(prefix)
 
-        mat = transform.match( /^matrix\((.+)\)$/ );
+        let mat3d = transform.match(/^matrix3d\((.+)\)$/);
+        if ( mat3d ) {
+        	let coords = mat3d[1].split(', ');
+            return {
+            	x: parseFloat( coords[12] ),
+            	y: parseFloat( coords[13] )
+            };        	
+        }
 
-        x = (  mat 
-             ? parseFloat(mat[1].split(', ')[4]) 
-             : 0  );
-        y = (  mat 
-             ? parseFloat(mat[1].split(', ')[5]) 
-             : 0  );
+        let mat2d = transform.match( /^matrix\((.+)\)$/ );
+        if ( mat2d ) {
+        	let coords = mat2d[1].split(', ');
+        	return {
+            	x: parseFloat( coords[4] ),
+            	y: parseFloat( coords[5] )
+            };
+        }
 
-        return { x, y };
+        return {  x: 0, y: 0 };
     },
 
     hasClass (ele, cls) {
@@ -164,7 +206,22 @@ let util = {
     		width  : parseInt(ele.clientWidth, 10),
     		height : parseInt(ele.clientHeight, 10) 
     	};
-    }
+    },
+
+    getScreenSize() {
+	    let e = window;
+	    let a = 'inner';
+
+	    if ( !( 'innerWidth' in window ) ) {
+	        a = 'client';
+	        e = document.documentElement || document.body;
+	    }
+
+	    return { 
+	        width  : e[a+'Width'], 
+	        height : e[a+'Height'] 
+	    };
+	}
 };
 
 export { util };

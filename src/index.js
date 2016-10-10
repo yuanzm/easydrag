@@ -1,6 +1,6 @@
 /**
  * @author: zimyuan
- * @last-edit-date: 2016-10-08
+ * @last-edit-date: 2016-10-10
  */
 
 import { util } from './util';
@@ -14,6 +14,7 @@ let defaultConfig = {
 	lockX         : false,
 	lockY         : false,
 	useGPU        : true,
+	lockScreen    : false
 };
 
 function none() {}
@@ -24,8 +25,7 @@ function none() {}
 export default class EasyDrag {
 	constructor (ele, handlers = {}, options = {}) {
 		// Extend default config, customize will replace default config.
-		this.config = util.extend(defaultConfig, options);
-		console.log(this.config)
+		this.config    = util.extend(defaultConfig, options);
 		this.ele       = ele;
 		this.dragEvent = util.getDragEvents();
 
@@ -39,7 +39,12 @@ export default class EasyDrag {
 
 	init () {
 		// use to save start positon temply
-		this.startPos = { x: 0, y: 0 };
+		this.startPos = util.getPosition(this.ele);
+
+		this.initPos  = util.getOffsetPosition(this.ele);
+		this.currPos  = { x: 0, y: 0 };
+
+		this.prefix = util.getStylePrefix();
 
 		// bind function context
 		this.start = this.start.bind(this);
@@ -49,7 +54,26 @@ export default class EasyDrag {
 		util.addEvent(this.ele, this.dragEvent.start, this.start);
 
 		if ( this.config.wrapper )
-			this.setWrapper(this.config.wrapper);
+			this.limitDragInWrapper(this.config.wrapper);
+
+		if ( this.config.lockScreen )
+			this.limitDragInScreen();
+			
+		this.initGPUAcceleration();
+
+		// fix bug in WeChat(IOS)!!!
+		document.ontouchend = none;
+	}
+
+	/**
+	 * Use GPU Acceleration to improve performance.
+	 * 
+	 * reference
+	 * https://www.sitepoint.com/introduction-to-hardware-acceleration-css-animations/
+	 */
+	initGPUAcceleration () {
+		if ( this.config.useGPU )
+			util.setCSSText(this.ele, 'transform: translate3d(0px, 0px, 0px);');
 	}
 
 	getPosInLimit (cur, lowLimit, highLimit) {
@@ -67,23 +91,39 @@ export default class EasyDrag {
 		return validPos;
 	}
 
-	moveTo (pos) {
-		let prefix = util.getStylePrefix();
+	getRealPosition (startPos, movePos) {
+		return {
+			x: startPos.x + movePos.x,
+			y: startPos.y + movePos.y
+		}
+	}
 
-		this.ele.style.cssText = `${prefix}:translate(${pos.x}px, ${pos.y}px);`;
+	moveTo (pos) {
+		let GPUCSS = (  this.config.useGPU
+					  ? 'translate3d(0px, 0px, 0px)'
+					  : ''  );
+		
+		let cssStr = `${this.prefix}:translate(${pos.x}px, ${pos.y}px) ${GPUCSS};`;
+
+		util.setCSSText(this.ele, cssStr);
 	}
 
 	start (e) {
 		let that = this;
 
+		if ( that.ele.setCapture ) {
+          	that.ele.setCapture();
+      	} else if ( window.captureEvents ) {
+			window.captureEvents(Event.MOUSEMOVE | Event.MOUSEUP);
+      	}
+
 		util.preventDefault(e);
 		util.addClass(that.ele, that.config.draggingClass);
-		// TODO: set index
 
 		// save start position temply
 		that.startPos    = util.getPosition(that.ele);
 		that.startCursor = util.getCursor(e);
-		
+
 		// add event listener
 		util.addEvent(document, that.dragEvent.move, that.move);
 		util.addEvent(document, that.dragEvent.end,  that.end);
@@ -124,9 +164,10 @@ export default class EasyDrag {
 				that.startCursor.y = newCursor.y;
 		}
 
-		// set next start position
 		that.moveTo(that.startPos);
-		that.onDragIng(that.startPos.x, that.startPos.y, e);
+
+		that.currPos = that.getRealPosition(that.initPos, that.startPos);
+		that.onDragIng(that.currPos.x, that.currPos.y, e);
 	}	
 
 	end () {
@@ -136,38 +177,50 @@ export default class EasyDrag {
 
 		util.removeEvent(document, that.dragEvent.move, that.move);
 		util.removeEvent(document, that.dragEvent.end,  that.end);
+
+		window.captureEvents(Event.MOUSEMOVE|Event.MOUSEUP);
 	}
 
-	/**
-	 * Set drap wrapper.
-	 */
-	setWrapper (outer) {
+	setBoundWithSizeAndPos (outerPos, elePos, outerSize, eleSize) {
 		let that = this;
-
-		let outerPos = util.getPosition(outer);
-		let elePos   = util.getPosition(that.ele);
-
-		let outerSize = util.getEleSize(outer);
-		let eleSize   = util.getEleSize(that.ele);
-
 		let lowerX = 0;
 		let lowerY = 0;
 		let highX  = 0;
-		let highY  = 0;		
+		let highY  = 0;
 
 		if ( !that.config.lockX ) {
-			lowerX = elePos.x - outerPos.x;
+			lowerX = outerPos.x - elePos.x;
 			highX  = outerSize.width - eleSize.width - Math.abs(lowerX);
 		} 
 
 		if ( !that.config.lockY ) {
-			lowerY = elePos.y - outerPos.y;
+			lowerY = outerPos.y - elePos.y;
 			highY  = outerSize.height - eleSize.height - Math.abs(lowerY);
 		}
 
 		this.config.limitX = [lowerX, highX];
 		this.config.limitY = [lowerY, highY];
+	}
 
-		console.log(this.config.limitY)
+	limitDragInWrapper (outer) {
+		let that = this;
+
+		that.setBoundWithSizeAndPos(
+			util.getOffsetPosition(outer),
+			util.getOffsetPosition(that.ele),
+			util.getEleSize(outer),
+			util.getEleSize(that.ele)
+		);
+	}
+
+	limitDragInScreen () {
+		let that = this;
+
+		that.setBoundWithSizeAndPos(
+			{ x: 0, y: 0 },
+			util.getOffsetPosition(that.ele),
+			util.getScreenSize(),
+			util.getEleSize(that.ele)
+		);
 	}
 }
