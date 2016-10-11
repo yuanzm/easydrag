@@ -1,0 +1,40 @@
+{
+  "name": "wxgame",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --compilers js:babel-core/register ./test/**/*.test.js -r test/testhelper.js",
+    "start": "webpack --watch --config webpack.config.js",
+    "deploy": "webpack -p --config webpack.production.config.js",
+    "lint": "./node_modules/.bin/eslint src/**/*.js",
+    "test-cove": "istanbul cover node_modules/mocha/bin/_mocha -- --compilers js:babel-core/register ./test/**/*.test.js -r test/testhelper.js"
+  },
+  "keywords": [
+    "wxgame"
+  ],
+  "author": "zimyuan",
+  "license": "MIT",
+  "dependencies": {
+    "babel-core": "^6.10.4",
+    "babel-eslint": "^6.1.2",
+    "babel-loader": "^6.2.4",
+    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-plugin-transform-runtime": "^6.9.0",
+    "babel-polyfill": "^6.13.0",
+    "babel-preset-es2015": "^6.9.0",
+    "babel-preset-stage-0": "^6.5.0",
+    "eslint": "^2.13.1",
+    "eslint-config-airbnb": "^9.0.1",
+    "eslint-plugin-import": "^1.10.3",
+    "eslint-plugin-jsx-a11y": "^1.2.0",
+    "eslint-plugin-react": "^5.2.2",
+    "istanbul": "1.0.0-alpha.2",
+    "jsdom": "^9.4.2",
+    "mocha": "^3.0.2",
+    "should": "^11.1.0",
+    "should-sinon": "0.0.5",
+    "sinon": "^1.17.5",
+    "webpack": "^1.13.1"
+  }
+}

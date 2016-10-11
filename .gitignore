@@ -1,1 +1,5 @@
 node_modules/
+webpack.test.config.js
+gulpfile.js
+coverage/
+npm-debug.log

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head lang="zh-CN">
+    <meta charset="UTF-8">
+    <title>easydrag</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <meta name="apple-mobile-web-app-capable" content="no"/>
+    <meta name="format-detection" content="telephone=no">
+    <meta name="wxm:timeline_title" content=" ">
+    <meta name="wxm:appmessage_title" content=" ">
+    <meta name="wxm:appmessage_desc" content=" ">
+    <meta name="wxm:img_url" content="">
+    <meta name="wxm:link" content="">
+    <style type="text/css">
+        * {border:0;margin:0;outline:0;padding:0}
+
+        body {
+            font: 13px "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+            text-align: center;
+        }
+
+        /* navigation */
+        #nav {
+            background: #ddd;
+            height: 36px;
+            overflow: hidden;
+        }
+
+        #nav li {
+            width: 25%;
+            float: left;
+            line-height: 36px;
+            list-style: none;
+            margin-right: -4px;
+        }
+        #nav li.active {
+            background: #C0427E;
+            color: #fff;
+            font-weight: bold;
+        }
+        /* balls */
+
+        .ball {
+            border-radius: 30px;
+            color: rgba(255, 255, 255, .5);
+            display: inline-block;
+            font: bold 40px/100px Arial;
+            height: 60px;
+            width: 60px;
+            margin-top: 100px;
+        }
+
+        .red { background: red }
+        .green { background: green }
+        .blue { background: blue }
+
+        /* layout */
+
+        #container {
+            background: #eee;
+
+            position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                top: 36px;
+        }
+
+        h1 {
+            font-size: 40px;
+            line-height: 60px;
+        }
+
+        /* mobile */
+        @media only screen and (min-device-width : 320px) and (max-device-width : 480px) {
+
+            #info {
+                font: bold 16px/32px Arial;
+            }
+
+        }
+
+        #container {
+            bottom: 130px;
+            left: 30px;
+            right: 30px;
+            top: 50px;
+        }
+
+        #coords {
+            width: 100%;
+            height: 50px;
+            overflow: hidden;
+            position: fixed;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);/* IE9、标准浏览器、IE6和部分IE7内核的浏览器(如QQ浏览器)会读懂 */
+        }
+        .coords-bar {
+            width: 50%;
+            float: left;
+            text-align: center;
+            line-height: 50px;
+            color: #fff;
+        }
+
+        #coords-x {
+            position: relative;
+        }
+        #coords-x:after {
+            content: '';
+            width: 1px;
+            height: 100%;
+            background-color: #fff;
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+    </style>
+</head>
+<body>
+    <ul id="nav">
+        <li>Basic</li>
+        <li class="active">Bounded</li>
+        <li>Screen</li>
+        <li>LockX</li>
+    </ul>
+
+    <div id="container">
+        <div id="ball" class="ball blue"></div>
+    </div>
+    
+    <div id="coords">
+        <div id="coords-x" class="coords-bar">x</div>
+        <div id="coords-y" class="coords-bar">y</div>
+    </div>
+</body>
+<script type="text/javascript" src="../dist/index.js"></script>
+<script type="text/javascript">
+    var x = document.getElementById('coords-x');
+    var y = document.getElementById('coords-y');
+    
+    var drag = new EasyDrag(
+        document.getElementById('ball'),
+        {
+            onDragIng: function(_x, _y, e) {
+                x.innerHTML = 'x: ' + _x;
+                y.innerHTML = 'y: ' + _y;
+            }
+        },
+        {   
+            lockScreen: true,
+            // lockX   : true,
+            // wrapper : document.getElementById('container')
+        }
+    );
+</script>
+<!-- <script type="text/javascript" src="http://wechatfe.github.io/vconsole/lib/vconsole.min.js?v=2.4.0"></script> -->
+</html>
