@@ -118,10 +118,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			key: 'init',
 			value: function init() {
 				// use to save start positon temply
-				this.startPos = _util.util.getPosition(this.ele);
-
+				this.startPos = _util.util.getOffsetPosition(this.ele);
 				this.initPos = _util.util.getOffsetPosition(this.ele);
-				this.currPos = { x: 0, y: 0 };
 
 				this.prefix = _util.util.getStylePrefix();
 
@@ -130,30 +128,22 @@ return /******/ (function(modules) { // webpackBootstrap
 				this.move = this.move.bind(this);
 				this.end = this.end.bind(this);
 
-				_util.util.addEvent(this.ele, this.dragEvent.start, this.start);
-
+				// set drag wrapper
 				if (this.config.wrapper) this.limitDragInWrapper(this.config.wrapper);
 
+				// limit drag in screen
 				if (this.config.lockScreen) this.limitDragInScreen();
 
-				this.initGPUAcceleration();
+				this.moveTo(this.initPos);
+
+				_util.util.addEvent(this.ele, this.dragEvent.start, this.start);
 
 				// fix bug in WeChat(IOS)!!!
 				document.ontouchend = none;
 			}
 
-			/**
-	   * Use GPU Acceleration to improve performance.
-	   * 
-	   * reference
-	   * https://www.sitepoint.com/introduction-to-hardware-acceleration-css-animations/
-	   */
+			// Check whether given position is in limit.
 
-		}, {
-			key: 'initGPUAcceleration',
-			value: function initGPUAcceleration() {
-				if (this.config.useGPU) _util.util.setCSSText(this.ele, 'transform: translate3d(0px, 0px, 0px);');
-			}
 		}, {
 			key: 'getPosInLimit',
 			value: function getPosInLimit(cur, lowLimit, highLimit) {
@@ -164,20 +154,11 @@ return /******/ (function(modules) { // webpackBootstrap
 				return validPos;
 			}
 		}, {
-			key: 'getRealPosition',
-			value: function getRealPosition(startPos, movePos) {
-				return {
-					x: startPos.x + movePos.x,
-					y: startPos.y + movePos.y
-				};
-			}
-		}, {
 			key: 'moveTo',
 			value: function moveTo(pos) {
-				var GPUCSS = this.config.useGPU ? 'translate3d(0px, 0px, 0px)' : '';
+				var GPUCSS = this.config.useGPU ? 'transform: translate3d(0px, 0px, 0px);' : '';
 
-				var cssStr = this.prefix + ':translate(' + pos.x + 'px, ' + pos.y + 'px) ' + GPUCSS + ';';
-
+				var cssStr = GPUCSS + ' position: absolute; left: ' + pos.x + 'px; top: ' + pos.y + 'px; margin: 0; bottom: auto; right: auto;';
 				_util.util.setCSSText(this.ele, cssStr);
 			}
 		}, {
@@ -195,44 +176,62 @@ return /******/ (function(modules) { // webpackBootstrap
 				_util.util.addClass(that.ele, that.config.draggingClass);
 
 				// save start position temply
-				that.startPos = _util.util.getPosition(that.ele);
+				that.startPos = _util.util.getOffsetPosition(that.ele);
 				that.startCursor = _util.util.getCursor(e);
 
 				// add event listener
 				_util.util.addEvent(document, that.dragEvent.move, that.move);
 				_util.util.addEvent(document, that.dragEvent.end, that.end);
 
-				that.onDragStart(that.startCursor.x, that.startCursor.y, e);
+				that.onDragStart(that.startPos.x, that.startPos.y, e);
+
+				that.setZoom();
+			}
+		}, {
+			key: 'setZoom',
+			value: function setZoom() {
+				var that = this;
+				var element = that.ele;
+				var zoom = 1;
+
+				while (element = element.offsetParent) {
+					var z = getStyle(element).zoom;
+
+					if (z && z !== 'normal') {
+						zoom = z;
+						break;
+					}
+				}
+
+				return zoom;
 			}
 		}, {
 			key: 'move',
 			value: function move(e) {
 				var that = this;
 				var newCursor = _util.util.getCursor(e);
+				var newPos = { x: that.startPos.x, y: that.startPos.y };
 
 				_util.util.preventDefault(e);
 
 				if (!that.config.lockX) {
-					var moveX = newCursor.x - that.startCursor.x;
-					var newX = that.startPos.x + moveX;
+					var newX = newCursor.x - that.startCursor.x + that.startPos.x;
 
-					that.startPos.x = that.getPosInLimit(newX, that.config.limitX[0], that.config.limitX[1]);
+					var validX = that.getPosInLimit(newX, that.config.limitX[0], that.config.limitX[1]);
 
-					if (that.startPos.x === newX) that.startCursor.x = newCursor.x;
+					newPos.x = validX;
 				}
 
 				if (!that.config.lockY) {
-					var moveY = newCursor.y - that.startCursor.y;
-					var newY = that.startPos.y + moveY;
+					var newY = newCursor.y - that.startCursor.y + that.startPos.y;
 
-					that.startPos.y = that.getPosInLimit(newY, that.config.limitY[0], that.config.limitY[1]);
-					if (that.startPos.y === newY) that.startCursor.y = newCursor.y;
+					var validY = that.getPosInLimit(newY, that.config.limitY[0], that.config.limitY[1]);
+
+					newPos.y = validY;
 				}
 
-				that.moveTo(that.startPos);
-
-				that.currPos = that.getRealPosition(that.initPos, that.startPos);
-				that.onDragIng(that.currPos.x, that.currPos.y, e);
+				that.moveTo(newPos);
+				that.onDragIng(newPos.x, newPos.y, e);
 			}
 		}, {
 			key: 'end',
@@ -265,8 +264,8 @@ return /******/ (function(modules) { // webpackBootstrap
 					highY = outerSize.height - eleSize.height - Math.abs(lowerY);
 				}
 
-				this.config.limitX = [lowerX, highX];
-				this.config.limitY = [lowerY, highY];
+				this.config.limitX = [elePos.x + lowerX, elePos.x + highX];
+				this.config.limitY = [elePos.y + lowerY, elePos.y + highY];
 			}
 		}, {
 			key: 'limitDragInWrapper',
