@@ -166,7 +166,10 @@ export default class EasyDrag {
 
 		that.moveTo(that.startPos);
 
-		that.currPos = that.getRealPosition(that.initPos, that.startPos);
+		that.currPos = that.getRealPosition(
+							that.initPos,
+							that.startPos
+						);
 		that.onDragIng(that.currPos.x, that.currPos.y, e);
 	}	
 
