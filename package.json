@@ -1,8 +1,8 @@
 {
-  "name": "wxgame",
-  "version": "0.0.1",
+  "name": "@tencent/easydrag",
+  "version": "0.1.2",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "mocha --compilers js:babel-core/register ./test/**/*.test.js -r test/testhelper.js",
     "start": "webpack --watch --config webpack.config.js",
@@ -11,7 +11,7 @@
     "test-cove": "istanbul cover node_modules/mocha/bin/_mocha -- --compilers js:babel-core/register ./test/**/*.test.js -r test/testhelper.js"
   },
   "keywords": [
-    "wxgame"
+    "easydrag"
   ],
   "author": "zimyuan",
   "license": "MIT",

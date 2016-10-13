@@ -136,8 +136,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				this.moveTo(this.initPos);
 
-				_util.util.addEvent(this.ele, this.dragEvent.start, this.start);
-
+				this.enable();
 				// fix bug in WeChat(IOS)!!!
 				document.ontouchend = none;
 			}
@@ -156,10 +155,20 @@ return /******/ (function(modules) { // webpackBootstrap
 		}, {
 			key: 'moveTo',
 			value: function moveTo(pos) {
-				var GPUCSS = this.config.useGPU ? 'transform: translate3d(0px, 0px, 0px);' : '';
+				var GPUCSS = this.config.useGPU ? 'transform: translate3d(0px, 0px, 0px)' : '';
 
-				var cssStr = GPUCSS + ' position: absolute; left: ' + pos.x + 'px; top: ' + pos.y + 'px; margin: 0; bottom: auto; right: auto;';
+				var cssStr = GPUCSS + ';\n\t\t\t\t\t  position : absolute;\n\t\t\t\t\t  left     : ' + pos.x + 'px; \n\t\t\t\t\t  top      : ' + pos.y + 'px;\n\t\t\t\t\t  margin   : 0;\n\t\t\t\t\t  bottom   : auto;\n\t\t\t\t\t  right    : auto;';
 				_util.util.setCSSText(this.ele, cssStr);
+			}
+		}, {
+			key: 'enable',
+			value: function enable() {
+				_util.util.addEvent(this.ele, this.dragEvent.start, this.start);
+			}
+		}, {
+			key: 'disable',
+			value: function disable() {
+				_util.util.removeEvent(this.ele, this.dragEvent.start, this.start);
 			}
 		}, {
 			key: 'start',
@@ -185,7 +194,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				that.onDragStart(that.startPos.x, that.startPos.y, e);
 
-				that.setZoom();
+				this.moveTo(this.startPos);
 			}
 		}, {
 			key: 'setZoom',
@@ -232,6 +241,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				that.moveTo(newPos);
 				that.onDragIng(newPos.x, newPos.y, e);
+				that.lastPos = newPos;
 			}
 		}, {
 			key: 'end',
@@ -244,6 +254,8 @@ return /******/ (function(modules) { // webpackBootstrap
 				_util.util.removeEvent(document, that.dragEvent.end, that.end);
 
 				window.captureEvents(Event.MOUSEMOVE | Event.MOUSEUP);
+
+				that.onDragEnd(that.lastPos.x, that.lastPos.y);
 			}
 		}, {
 			key: 'setBoundWithSizeAndPos',
@@ -300,7 +312,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	/**
 	 * @author: zimyuan
-	 * @last-edit-date: 2016-10-10
+	 * @last-edit-date: 2016-10-12
 	 */
 
 	var util = {

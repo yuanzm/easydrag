@@ -1,6 +1,6 @@
 /**
  * @author: zimyuan
- * @last-edit-date: 2016-10-10
+ * @last-edit-date: 2016-10-12
  */
 
 let util = {

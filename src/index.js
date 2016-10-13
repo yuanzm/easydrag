@@ -59,8 +59,7 @@ export default class EasyDrag {
 			
 		this.moveTo(this.initPos);
 
-		util.addEvent(this.ele, this.dragEvent.start, this.start);
-
+		this.enable();
 		// fix bug in WeChat(IOS)!!!
 		document.ontouchend = none;
 	}
@@ -83,11 +82,25 @@ export default class EasyDrag {
 
 	moveTo (pos) {
 		let GPUCSS = (  this.config.useGPU
-					  ? 'transform: translate3d(0px, 0px, 0px);'
+					  ? 'transform: translate3d(0px, 0px, 0px)'
 					  : ''  );
 		
-		let cssStr = `${GPUCSS} position: absolute; left: ${pos.x}px; top: ${pos.y}px; margin: 0; bottom: auto; right: auto;`;
+		let cssStr = `${GPUCSS};
+					  position : absolute;
+					  left     : ${pos.x}px; 
+					  top      : ${pos.y}px;
+					  margin   : 0;
+					  bottom   : auto;
+					  right    : auto;`;
 		util.setCSSText(this.ele, cssStr);
+	}
+
+	enable () {
+		util.addEvent(this.ele, this.dragEvent.start, this.start);
+	}
+
+	disable () {
+		util.removeEvent(this.ele, this.dragEvent.start, this.start);
 	}
 
 	start (e) {
@@ -112,7 +125,7 @@ export default class EasyDrag {
 
 		that.onDragStart(that.startPos.x, that.startPos.y, e);
 
-		that.setZoom();
+		this.moveTo(this.startPos);
 	}
 
     setZoom () {
@@ -167,6 +180,7 @@ export default class EasyDrag {
 
 		that.moveTo(newPos);
 		that.onDragIng(newPos.x, newPos.y, e);
+		that.lastPos = newPos;
 	}	
 
 	end () {
@@ -178,6 +192,8 @@ export default class EasyDrag {
 		util.removeEvent(document, that.dragEvent.end,  that.end);
 
 		window.captureEvents(Event.MOUSEMOVE|Event.MOUSEUP);
+
+		that.onDragEnd(that.lastPos.x ,that.lastPos.y);
 	}
 
 	setBoundWithSizeAndPos (outerPos, elePos, outerSize, eleSize) {
