@@ -69,7 +69,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @author: zimyuan
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @last-edit-date: 2016-10-10
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @last-edit-date: 2016-10-14
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
 	var _util = __webpack_require__(2);
@@ -107,6 +107,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			this.dragEvent = _util.util.getDragEvents();
 
 			// event hooks;
+			this.onBeforeDrag = handlers.onBeforeDrag || none;
 			this.onDragStart = handlers.onDragStart || none;
 			this.onDragIng = handlers.onDragIng || none;
 			this.onDragEnd = handlers.onDragEnd || none;
@@ -122,6 +123,8 @@ return /******/ (function(modules) { // webpackBootstrap
 				this.initPos = _util.util.getOffsetPosition(this.ele);
 
 				this.prefix = _util.util.getStylePrefix();
+
+				this.drag_start = false;
 
 				// bind function context
 				this.start = this.start.bind(this);
@@ -182,7 +185,6 @@ return /******/ (function(modules) { // webpackBootstrap
 				}
 
 				_util.util.preventDefault(e);
-				_util.util.addClass(that.ele, that.config.draggingClass);
 
 				// save start position temply
 				that.startPos = _util.util.getOffsetPosition(that.ele);
@@ -192,7 +194,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				_util.util.addEvent(document, that.dragEvent.move, that.move);
 				_util.util.addEvent(document, that.dragEvent.end, that.end);
 
-				that.onDragStart(that.startPos.x, that.startPos.y, e);
+				this.onBeforeDrag();
 
 				this.moveTo(this.startPos);
 			}
@@ -239,6 +241,12 @@ return /******/ (function(modules) { // webpackBootstrap
 					newPos.y = validY;
 				}
 
+				if (!that.drag_start) {
+					_util.util.addClass(that.ele, that.config.draggingClass);
+					that.onDragStart(newPos.x, newPos.y, e);
+					that.drag_start = true;
+				}
+
 				that.moveTo(newPos);
 				that.onDragIng(newPos.x, newPos.y, e);
 				that.lastPos = newPos;
@@ -255,7 +263,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				window.captureEvents(Event.MOUSEMOVE | Event.MOUSEUP);
 
-				that.onDragEnd(that.lastPos.x, that.lastPos.y);
+				if (that.drag_start) {
+					that.onDragEnd(that.lastPos.x, that.lastPos.y);
+					that.drag_start = false;
+				}
 			}
 		}, {
 			key: 'setBoundWithSizeAndPos',

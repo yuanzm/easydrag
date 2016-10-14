@@ -1,6 +1,6 @@
 /**
  * @author: zimyuan
- * @last-edit-date: 2016-10-10
+ * @last-edit-date: 2016-10-14
  */
 
 import { util } from './util';
@@ -30,9 +30,10 @@ export default class EasyDrag {
 		this.dragEvent   = util.getDragEvents();
 
 		// event hooks;
-		this.onDragStart = handlers.onDragStart || none;
-		this.onDragIng   = handlers.onDragIng   || none; 
-		this.onDragEnd   = handlers.onDragEnd   || none;
+		this.onBeforeDrag = handlers.onBeforeDrag || none; 
+		this.onDragStart  = handlers.onDragStart  || none;
+		this.onDragIng    = handlers.onDragIng    || none; 
+		this.onDragEnd    = handlers.onDragEnd    || none;
 
 		this.init();
 	}
@@ -43,6 +44,8 @@ export default class EasyDrag {
 		this.initPos   = util.getOffsetPosition(this.ele);
 
 		this.prefix = util.getStylePrefix();
+
+		this.drag_start = false;
 
 		// bind function context
 		this.start = this.start.bind(this);
@@ -113,7 +116,6 @@ export default class EasyDrag {
       	}
 
 		util.preventDefault(e);
-		util.addClass(that.ele, that.config.draggingClass);
 
 		// save start position temply
 		that.startPos    = util.getOffsetPosition(that.ele);
@@ -123,7 +125,7 @@ export default class EasyDrag {
 		util.addEvent(document, that.dragEvent.move, that.move);
 		util.addEvent(document, that.dragEvent.end,  that.end);
 
-		that.onDragStart(that.startPos.x, that.startPos.y, e);
+		this.onBeforeDrag();
 
 		this.moveTo(this.startPos);
 	}
@@ -178,6 +180,12 @@ export default class EasyDrag {
 			newPos.y = validY;								
 		}
 
+		if ( !that.drag_start ) {
+			util.addClass(that.ele, that.config.draggingClass);
+			that.onDragStart(newPos.x, newPos.y, e);
+			that.drag_start = true;
+		}
+
 		that.moveTo(newPos);
 		that.onDragIng(newPos.x, newPos.y, e);
 		that.lastPos = newPos;
@@ -193,7 +201,10 @@ export default class EasyDrag {
 
 		window.captureEvents(Event.MOUSEMOVE|Event.MOUSEUP);
 
-		that.onDragEnd(that.lastPos.x ,that.lastPos.y);
+		if ( that.drag_start ) {
+			that.onDragEnd(that.lastPos.x ,that.lastPos.y);			
+			that.drag_start = false;
+		}
 	}
 
 	setBoundWithSizeAndPos (outerPos, elePos, outerSize, eleSize) {
