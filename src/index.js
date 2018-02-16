@@ -1,6 +1,6 @@
 /**
  * @author: zimyuan
- * @last-edit-date: 2016-10-14
+ * @last-edit-date: 2016-10-10
  */
 
 import { util } from './util';
@@ -14,7 +14,8 @@ let defaultConfig = {
 	lockX         : false,
 	lockY         : false,
 	useGPU        : true,
-	lockScreen    : false
+	lockScreen    : false,
+    CSSPosition   : 'absolute',
 };
 
 function none() {}
@@ -30,36 +31,30 @@ export default class EasyDrag {
 		this.dragEvent   = util.getDragEvents();
 
 		// event hooks;
-		this.onBeforeDrag = handlers.onBeforeDrag || none; 
-		this.onDragStart  = handlers.onDragStart  || none;
-		this.onDragIng    = handlers.onDragIng    || none; 
-		this.onDragEnd    = handlers.onDragEnd    || none;
+		this.onDragStart = handlers.onDragStart || none;
+		this.onDragIng   = handlers.onDragIng   || none;
+		this.onDragEnd   = handlers.onDragEnd   || none;
+
+        this.isFixed = !!( this.config.CSSPosition === 'fixed' );
 
 		this.init();
 	}
 
 	init () {
 		// use to save start positon temply
-		this.startPos  = util.getOffsetPosition(this.ele);
-		this.initPos   = util.getOffsetPosition(this.ele);
+		this.startPos  = util.getOffsetPosition(this.ele, this.isFixed);
+		this.initPos   = util.getOffsetPosition(this.ele, this.isFixed);
 
 		this.prefix = util.getStylePrefix();
-
-		this.drag_start = false;
 
 		// bind function context
 		this.start = this.start.bind(this);
 		this.move  = this.move.bind(this);
 		this.end   = this.end.bind(this);
 
-		// set drag wrapper
-		if ( this.config.wrapper )
-			this.limitDragInWrapper(this.config.wrapper);
+        // 将拖拽限定在边界内
+        this.limitDragInWrapper();
 
-		// limit drag in screen
-		if ( this.config.lockScreen )
-			this.limitDragInScreen();
-			
 		this.moveTo(this.initPos);
 
 		this.enable();
@@ -87,10 +82,10 @@ export default class EasyDrag {
 		let GPUCSS = (  this.config.useGPU
 					  ? 'transform: translate3d(0px, 0px, 0px)'
 					  : ''  );
-		
+
 		let cssStr = `${GPUCSS};
-					  position : absolute;
-					  left     : ${pos.x}px; 
+					  position : ${this.config.CSSPosition};
+					  left     : ${pos.x}px;
 					  top      : ${pos.y}px;
 					  margin   : 0;
 					  bottom   : auto;
@@ -116,16 +111,20 @@ export default class EasyDrag {
       	}
 
 		util.preventDefault(e);
+		util.addClass(that.ele, that.config.draggingClass);
 
 		// save start position temply
-		that.startPos    = util.getOffsetPosition(that.ele);
+		that.startPos    = util.getOffsetPosition(that.ele, this.isFixed);
 		that.startCursor = util.getCursor(e);
 
 		// add event listener
 		util.addEvent(document, that.dragEvent.move, that.move);
 		util.addEvent(document, that.dragEvent.end,  that.end);
 
-		this.onBeforeDrag();
+		that.onDragStart(that.startPos.x, that.startPos.y, e);
+
+        // 将拖拽限定在边界内
+        this.limitDragInWrapper();
 
 		this.moveTo(this.startPos);
 	}
@@ -150,46 +149,40 @@ export default class EasyDrag {
 	move (e) {
 		let that      = this;
 		let newCursor = util.getCursor(e);
-		let newPos    = {x: that.startPos.x, y: that.startPos.y};  
+		let newPos    = {x: that.startPos.x, y: that.startPos.y};
 
 		util.preventDefault(e);
 
 		if ( !that.config.lockX ) {
 			let newX = newCursor.x - that.startCursor.x + that.startPos.x;
 
-			let validX = 
+			let validX =
 				that.getPosInLimit(
 					newX,
 					that.config.limitX[0],
 					that.config.limitX[1]
 				 );
-				
+
 			newPos.x = validX;
 		}
 
 		if ( !that.config.lockY ) {
 			let newY = newCursor.y - that.startCursor.y + that.startPos.y;
 
-			let validY = 
+			let validY =
 				that.getPosInLimit(
 					newY,
 					that.config.limitY[0],
 					that.config.limitY[1]
 				);
 
-			newPos.y = validY;								
-		}
-
-		if ( !that.drag_start ) {
-			util.addClass(that.ele, that.config.draggingClass);
-			that.onDragStart(newPos.x, newPos.y, e);
-			that.drag_start = true;
+			newPos.y = validY;
 		}
 
 		that.moveTo(newPos);
 		that.onDragIng(newPos.x, newPos.y, e);
 		that.lastPos = newPos;
-	}	
+	}
 
 	end () {
 		let that = this;
@@ -201,10 +194,11 @@ export default class EasyDrag {
 
 		window.captureEvents(Event.MOUSEMOVE|Event.MOUSEUP);
 
-		if ( that.drag_start ) {
-			that.onDragEnd(that.lastPos.x ,that.lastPos.y);			
-			that.drag_start = false;
-		}
+        let endPos = (  this.lastPos && this.lastPos.x
+                      ? this.lastPos
+                      : this.startPos  );
+
+		that.onDragEnd(endPos.x, endPos.y);
 	}
 
 	setBoundWithSizeAndPos (outerPos, elePos, outerSize, eleSize) {
@@ -217,7 +211,7 @@ export default class EasyDrag {
 		if ( !that.config.lockX ) {
 			lowerX = outerPos.x - elePos.x;
 			highX  = outerSize.width - eleSize.width - Math.abs(lowerX);
-		} 
+		}
 
 		if ( !that.config.lockY ) {
 			lowerY = outerPos.y - elePos.y;
@@ -228,25 +222,33 @@ export default class EasyDrag {
 		this.config.limitY = [elePos.y + lowerY, elePos.y + highY];
 	}
 
-	limitDragInWrapper (outer) {
-		let that = this;
+	limitDragInWrapper () {
+        if ( !this.config.wrapper && !this.config.lockScreen )
+            return;
 
-		that.setBoundWithSizeAndPos(
-			util.getOffsetPosition(outer),
-			util.getOffsetPosition(that.ele),
-			util.getEleSize(outer),
-			util.getEleSize(that.ele)
-		);
-	}
+		// set drag wrapper
+		if ( this.config.wrapper ) {
+            let outet = this.config.wrapper;
+            let that = this;
 
-	limitDragInScreen () {
-		let that = this;
+            that.setBoundWithSizeAndPos(
+                util.getOffsetPosition(outer, this.isFixed),
+                util.getOffsetPosition(that.ele, this.isFixed),
+                util.getEleSize(outer),
+                util.getEleSize(that.ele)
+            );
+        }
 
-		that.setBoundWithSizeAndPos(
-			{ x: 0, y: 0 },
-			util.getOffsetPosition(that.ele),
-			util.getScreenSize(),
-			util.getEleSize(that.ele)
-		);
+		// limit drag in screen
+		if ( this.config.lockScreen ) {
+            let that = this;
+
+            that.setBoundWithSizeAndPos(
+                { x: 0, y: 0 },
+                util.getOffsetPosition(that.ele, this.isFixed),
+                util.getScreenSize(),
+                util.getEleSize(that.ele)
+            );
+        }
 	}
 }

@@ -52,14 +52,14 @@ return /******/ (function(modules) { // webpackBootstrap
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	module.exports = __webpack_require__(1);
 
 
-/***/ },
+/***/ }),
 /* 1 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
@@ -69,7 +69,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @author: zimyuan
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @last-edit-date: 2016-10-14
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @last-edit-date: 2016-10-10
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
 	var _util = __webpack_require__(2);
@@ -85,7 +85,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		lockX: false,
 		lockY: false,
 		useGPU: true,
-		lockScreen: false
+		lockScreen: false,
+		CSSPosition: 'absolute'
 	};
 
 	function none() {}
@@ -107,10 +108,11 @@ return /******/ (function(modules) { // webpackBootstrap
 			this.dragEvent = _util.util.getDragEvents();
 
 			// event hooks;
-			this.onBeforeDrag = handlers.onBeforeDrag || none;
 			this.onDragStart = handlers.onDragStart || none;
 			this.onDragIng = handlers.onDragIng || none;
 			this.onDragEnd = handlers.onDragEnd || none;
+
+			this.isFixed = !!(this.config.CSSPosition === 'fixed');
 
 			this.init();
 		}
@@ -119,23 +121,18 @@ return /******/ (function(modules) { // webpackBootstrap
 			key: 'init',
 			value: function init() {
 				// use to save start positon temply
-				this.startPos = _util.util.getOffsetPosition(this.ele);
-				this.initPos = _util.util.getOffsetPosition(this.ele);
+				this.startPos = _util.util.getOffsetPosition(this.ele, this.isFixed);
+				this.initPos = _util.util.getOffsetPosition(this.ele, this.isFixed);
 
 				this.prefix = _util.util.getStylePrefix();
-
-				this.drag_start = false;
 
 				// bind function context
 				this.start = this.start.bind(this);
 				this.move = this.move.bind(this);
 				this.end = this.end.bind(this);
 
-				// set drag wrapper
-				if (this.config.wrapper) this.limitDragInWrapper(this.config.wrapper);
-
-				// limit drag in screen
-				if (this.config.lockScreen) this.limitDragInScreen();
+				// 将拖拽限定在边界内
+				this.limitDragInWrapper();
 
 				this.moveTo(this.initPos);
 
@@ -160,7 +157,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			value: function moveTo(pos) {
 				var GPUCSS = this.config.useGPU ? 'transform: translate3d(0px, 0px, 0px)' : '';
 
-				var cssStr = GPUCSS + ';\n\t\t\t\t\t  position : absolute;\n\t\t\t\t\t  left     : ' + pos.x + 'px; \n\t\t\t\t\t  top      : ' + pos.y + 'px;\n\t\t\t\t\t  margin   : 0;\n\t\t\t\t\t  bottom   : auto;\n\t\t\t\t\t  right    : auto;';
+				var cssStr = GPUCSS + ';\n\t\t\t\t\t  position : ' + this.config.CSSPosition + ';\n\t\t\t\t\t  left     : ' + pos.x + 'px;\n\t\t\t\t\t  top      : ' + pos.y + 'px;\n\t\t\t\t\t  margin   : 0;\n\t\t\t\t\t  bottom   : auto;\n\t\t\t\t\t  right    : auto;';
 				_util.util.setCSSText(this.ele, cssStr);
 			}
 		}, {
@@ -185,16 +182,20 @@ return /******/ (function(modules) { // webpackBootstrap
 				}
 
 				_util.util.preventDefault(e);
+				_util.util.addClass(that.ele, that.config.draggingClass);
 
 				// save start position temply
-				that.startPos = _util.util.getOffsetPosition(that.ele);
+				that.startPos = _util.util.getOffsetPosition(that.ele, this.isFixed);
 				that.startCursor = _util.util.getCursor(e);
 
 				// add event listener
 				_util.util.addEvent(document, that.dragEvent.move, that.move);
 				_util.util.addEvent(document, that.dragEvent.end, that.end);
 
-				this.onBeforeDrag();
+				that.onDragStart(that.startPos.x, that.startPos.y, e);
+
+				// 将拖拽限定在边界内
+				this.limitDragInWrapper();
 
 				this.moveTo(this.startPos);
 			}
@@ -241,12 +242,6 @@ return /******/ (function(modules) { // webpackBootstrap
 					newPos.y = validY;
 				}
 
-				if (!that.drag_start) {
-					_util.util.addClass(that.ele, that.config.draggingClass);
-					that.onDragStart(newPos.x, newPos.y, e);
-					that.drag_start = true;
-				}
-
 				that.moveTo(newPos);
 				that.onDragIng(newPos.x, newPos.y, e);
 				that.lastPos = newPos;
@@ -263,10 +258,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				window.captureEvents(Event.MOUSEMOVE | Event.MOUSEUP);
 
-				if (that.drag_start) {
-					that.onDragEnd(that.lastPos.x, that.lastPos.y);
-					that.drag_start = false;
-				}
+				var endPos = this.lastPos && this.lastPos.x ? this.lastPos : this.startPos;
+
+				that.onDragEnd(endPos.x, endPos.y);
 			}
 		}, {
 			key: 'setBoundWithSizeAndPos',
@@ -292,17 +286,23 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 		}, {
 			key: 'limitDragInWrapper',
-			value: function limitDragInWrapper(outer) {
-				var that = this;
+			value: function limitDragInWrapper() {
+				if (!this.config.wrapper && !this.config.lockScreen) return;
 
-				that.setBoundWithSizeAndPos(_util.util.getOffsetPosition(outer), _util.util.getOffsetPosition(that.ele), _util.util.getEleSize(outer), _util.util.getEleSize(that.ele));
-			}
-		}, {
-			key: 'limitDragInScreen',
-			value: function limitDragInScreen() {
-				var that = this;
+				// set drag wrapper
+				if (this.config.wrapper) {
+					var outet = this.config.wrapper;
+					var that = this;
 
-				that.setBoundWithSizeAndPos({ x: 0, y: 0 }, _util.util.getOffsetPosition(that.ele), _util.util.getScreenSize(), _util.util.getEleSize(that.ele));
+					that.setBoundWithSizeAndPos(_util.util.getOffsetPosition(outer, this.isFixed), _util.util.getOffsetPosition(that.ele, this.isFixed), _util.util.getEleSize(outer), _util.util.getEleSize(that.ele));
+				}
+
+				// limit drag in screen
+				if (this.config.lockScreen) {
+					var _that = this;
+
+					_that.setBoundWithSizeAndPos({ x: 0, y: 0 }, _util.util.getOffsetPosition(_that.ele, this.isFixed), _util.util.getScreenSize(), _util.util.getEleSize(_that.ele));
+				}
 			}
 		}]);
 
@@ -312,9 +312,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.default = EasyDrag;
 	module.exports = exports['default'];
 
-/***/ },
+/***/ }),
 /* 2 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	'use strict';
 
@@ -381,14 +381,22 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    /**
 	     * Get offset postion.
-	     * 
+	     *
 	     * reference
 	     *
 	     * http://youmightnotneedjquery.com/
 	     * http://ejohn.org/blog/getboundingclientrect-is-awesome/
 	     */
 	    getOffsetPosition: function getOffsetPosition(ele) {
+	        var isFixed = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
 	        var rect = ele.getBoundingClientRect();
+
+	        // fixed定位的不需要考虑偏移
+	        if (isFixed) return {
+	            x: rect.left,
+	            y: rect.top
+	        };
 
 	        return {
 	            x: rect.left + document.body.scrollLeft,
@@ -457,12 +465,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    /**
 	     * Prevent default behavior.
-	     * 
+	     *
 	     * e.preventDefault() will prevent the default event from occuring,
 	     * e.stopPropagation() will prevent the event from bubbling up and return false will do both.
 	     * Note that this behaviour differs from normal (non-jQuery) event handlers,
 	     * in which, notably, return false does not stop the event from bubbling up.
-	     * 
+	     *
 	     * reference:
 	     * http://stackoverflow.com/questions/1357118/event-preventdefault-vs-return-false
 	     * http://stackoverflow.com/questions/1000597/event-preventdefault-function-not-working-in-ie
@@ -478,7 +486,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    /**
 	     * Get cursor's current position.
-	     * 
+	     *
 	     * reference
 	     * http://stackoverflow.com/questions/7056026/variation-of-e-touches-e-targettouches-and-e-changedtouches
 	     */
@@ -523,7 +531,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.util = util;
 
-/***/ }
+/***/ })
 /******/ ])
 });
 ;

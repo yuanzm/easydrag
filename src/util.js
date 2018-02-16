@@ -51,8 +51,8 @@ let util = {
     isStrEndWith (str, suffix) {
     	let l = str.length - suffix.length;
 
-		return (   l >= 0 
-				&& str.indexOf(suffix, l) === l  );	
+		return (   l >= 0
+				&& str.indexOf(suffix, l) === l  );
     },
 
 	setCSSText(ele, cssStr) {
@@ -63,18 +63,25 @@ let util = {
 			cssText += ';';
 
 		ele.style.cssText = cssText + cssStr;
-	}, 
+	},
 
     /**
      * Get offset postion.
-     * 
+     *
      * reference
      *
      * http://youmightnotneedjquery.com/
      * http://ejohn.org/blog/getboundingclientrect-is-awesome/
      */
-    getOffsetPosition (ele) {
+    getOffsetPosition (ele, isFixed = false) {
       	var rect = ele.getBoundingClientRect();
+
+        // fixed定位的不需要考虑偏移
+        if ( isFixed )
+            return {
+                x: rect.left,
+                y: rect.top
+            };
 
 		return {
 		  	x: rect.left + document.body.scrollLeft,
@@ -96,7 +103,7 @@ let util = {
             return {
             	x: parseFloat( coords[12] ),
             	y: parseFloat( coords[13] )
-            };        	
+            };
         }
 
         let mat2d = transform.match( /^matrix\((.+)\)$/ );
@@ -135,38 +142,38 @@ let util = {
     addEvent (element, type, handler) {
         if ( element.addEventListener )
             element.addEventListener(type, handler, false);
-        
+
         else if ( element.attachEvent )
             element.attachEvent('on' + type, handler);
-        
+
         else
             element['on' + type] = handler;
     },
-    
+
     // remove event listener hack
     removeEvent ( element, type, handler ) {
         if ( element.removeEventListener )
             element.removeEventListener(type, handler, false);
-        
+
         else if ( element.detachEvent )
             element.detachEvent('on' + type, handler);
-        
+
         else
             element['on' + type] = null;
     },
 
     /**
      * Prevent default behavior.
-     * 
+     *
      * e.preventDefault() will prevent the default event from occuring,
      * e.stopPropagation() will prevent the event from bubbling up and return false will do both.
      * Note that this behaviour differs from normal (non-jQuery) event handlers,
      * in which, notably, return false does not stop the event from bubbling up.
-     * 
+     *
      * reference:
      * http://stackoverflow.com/questions/1357118/event-preventdefault-vs-return-false
      * http://stackoverflow.com/questions/1000597/event-preventdefault-function-not-working-in-ie
-     */ 
+     */
     preventDefault (e) {
         if ( e.preventDefault )
             e.preventDefault();
@@ -179,15 +186,15 @@ let util = {
 
     /**
      * Get cursor's current position.
-     * 
+     *
      * reference
      * http://stackoverflow.com/questions/7056026/variation-of-e-touches-e-targettouches-and-e-changedtouches
      */
     getCursor (e) {
         return (  !!( 'ontouchstart' in window )
-                ? { 
+                ? {
                       x: e.touches[0].pageX,
-                      y: e.touches[0].pageY 
+                      y: e.touches[0].pageY
                   }
                 : {
                       x: e.clientX,
@@ -204,7 +211,7 @@ let util = {
     getEleSize (ele) {
     	return {
     		width  : parseInt(ele.clientWidth, 10),
-    		height : parseInt(ele.clientHeight, 10) 
+    		height : parseInt(ele.clientHeight, 10)
     	};
     },
 
@@ -217,9 +224,9 @@ let util = {
 	        e = document.documentElement || document.body;
 	    }
 
-	    return { 
-	        width  : e[a+'Width'], 
-	        height : e[a+'Height'] 
+	    return {
+	        width  : e[a+'Width'],
+	        height : e[a+'Height']
 	    };
 	}
 };
